@@ -13,7 +13,9 @@ import java.util.List;
 public interface TaskDao {
 
 	@Insert
-	long insertAndReturnId(Task task);  // Changed to return long ID
+	long insertAndReturnId(Task task);  // Returns the inserted row ID
+	@Insert
+	void insert(Task task);
 
 	@Update
 	void update(Task task);
@@ -21,9 +23,14 @@ public interface TaskDao {
 	@Delete
 	void delete(Task task);
 
-	// You can keep this LiveData version for your MainActivity recyclerView updates
+	@Query("DELETE FROM tasks")
+	void deleteAll();  // 🔥 Deletes ALL tasks from the table
+
 	@Query("SELECT * FROM tasks ORDER BY dueTimeMillis ASC")
 	LiveData<List<Task>> getAllTasks();
+
+	@Query("SELECT * FROM tasks ORDER BY dueTimeMillis ASC")
+	List<Task> getAll();  // ✅ Non-LiveData version for background thread loading
 
 	@Query("SELECT * FROM tasks WHERE id = :taskId LIMIT 1")
 	Task getTaskById(int taskId);

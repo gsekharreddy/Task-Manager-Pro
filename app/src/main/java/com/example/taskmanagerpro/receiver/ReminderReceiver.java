@@ -8,6 +8,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Build;
+import android.util.Log;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
@@ -21,11 +23,15 @@ public class ReminderReceiver extends BroadcastReceiver {
 
 	@Override
 	public void onReceive(Context context, Intent intent) {
-		// Get task info from intent extras
 		int taskId = intent.getIntExtra("taskId", -1);
 		String taskTitle = intent.getStringExtra("taskTitle");
 
-		// 🔔 Open TaskDetailActivity on tap
+		Log.d("ReminderReceiver", "Alarm received for taskId: " + taskId + ", Title: " + taskTitle);
+
+		// Quick Toast to check if receiver triggers
+		Toast.makeText(context, "Reminder: " + (taskTitle != null ? taskTitle : "Task"), Toast.LENGTH_SHORT).show();
+
+		// Intent to open TaskDetailActivity when notification is tapped
 		Intent openIntent = new Intent(context, TaskDetailActivity.class);
 		openIntent.putExtra("taskId", taskId);
 
@@ -33,11 +39,11 @@ public class ReminderReceiver extends BroadcastReceiver {
 				context,
 				taskId,
 				openIntent,
-				PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+				PendingIntent.FLAG_CANCEL_CURRENT | PendingIntent.FLAG_IMMUTABLE
 		);
 
-		// ✅ Ensure notification channel exists
 		NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			NotificationChannel channel = new NotificationChannel(
 					CHANNEL_ID,
@@ -48,19 +54,22 @@ public class ReminderReceiver extends BroadcastReceiver {
 			channel.enableLights(true);
 			channel.setLightColor(Color.CYAN);
 			channel.enableVibration(true);
-			manager.createNotificationChannel(channel);
+			if (manager != null) {
+				manager.createNotificationChannel(channel);
+			}
 		}
 
-		// 🔥 Build the notification
 		NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-				.setSmallIcon(R.drawable.ic_notification) // use a custom icon from drawable
+				.setSmallIcon(R.drawable.ic_notification)  // make sure this icon exists!
 				.setContentTitle("Task Reminder 🔔")
 				.setContentText(taskTitle != null ? taskTitle : "You have a task reminder!")
 				.setPriority(NotificationCompat.PRIORITY_HIGH)
 				.setContentIntent(pendingIntent)
-				.setAutoCancel(true);
+				.setAutoCancel(true)
+				.setDefaults(NotificationCompat.DEFAULT_ALL);  // vibrate, sound, lights
 
-		// 💣 Fire it
-		manager.notify(taskId, builder.build());
+		if (manager != null) {
+			manager.notify(taskId, builder.build());
+		}
 	}
 }

@@ -32,6 +32,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 		this.taskList = taskList;
 		this.listener = listener;
 	}
+	public Task getTaskAt(int position) {
+		return taskList.get(position);
+	}
+
+	public void removeTask(int position) {
+		taskList.remove(position);
+		notifyItemRemoved(position);
+	}
 
 	@NonNull
 	@Override
@@ -46,7 +54,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
 		holder.tvTitle.setText(task.getTitle());
 
-		// Convert dueTimeMillis to formatted string
 		SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
 		String formattedDate = sdf.format(new Date(task.getDueTimeMillis()));
 		holder.tvDueDate.setText("Due: " + formattedDate);
@@ -56,10 +63,11 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
 	@Override
 	public int getItemCount() {
-		return taskList.size();
+		return taskList != null ? taskList.size() : 0;
 	}
 
-	public void updateTasks(List<Task> newTasks) {
+	// Used in MainActivity to refresh the list
+	public void setTasks(List<Task> newTasks) {
 		this.taskList = newTasks;
 		notifyDataSetChanged();
 	}
