@@ -45,7 +45,7 @@
             android:id="@+id/etDetailDueDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Due Date"
+            android:hint="Due Time (millis)"
             android:focusable="false"
             android:layout_marginBottom="12dp" />
 
@@ -55,6 +55,14 @@
             android:layout_height="wrap_content"
             android:hint="Reminder Time"
             android:focusable="false"
+            android:layout_marginBottom="16dp" />
+
+        <!-- Added Checkbox for reminder -->
+        <CheckBox
+            android:id="@+id/cbReminder"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Set Reminder"
             android:layout_marginBottom="16dp" />
 
         <LinearLayout
