@@ -2,42 +2,37 @@ package com.example.taskmanagerpro;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
+import android.view.View;
+import android.widget.Toast;
 
-import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.lifecycle.Observer;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.taskmanagerpro.adapter.TaskAdapter;
 import com.example.taskmanagerpro.database.AppDatabase;
 import com.example.taskmanagerpro.database.Task;
+import com.example.taskmanagerpro.utils.AlarmUtils;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTaskClickListener {
+public class MainActivity extends AppCompatActivity {
 
 	private RecyclerView recyclerView;
 	private TaskAdapter taskAdapter;
-	private List<Task> taskList = new ArrayList<>();
+	private AppDatabase db;
 
-	// New launcher must be declared here at class level
-	private ActivityResultLauncher<Intent> addTaskLauncher = registerForActivityResult(
-			new ActivityResultContracts.StartActivityForResult(),
-			result -> {
-				if (result.getResultCode() == RESULT_OK) {
-					// Reload your task list here if needed
-					// But LiveData observer should auto update
-					// loadTasks(); // Optional if you have loadTasks method
-				}
-			}
-	);
+	private FloatingActionButton fabAdd, fabDeleteAll;
+	private View parentLayout;
+
+	private Task recentlyDeletedTask;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -45,47 +40,106 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 		setContentView(R.layout.activity_main);
 		overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
 
-		FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
+		parentLayout = findViewById(android.R.id.content);
+		recyclerView = findViewById(R.id.recyclerView);
+		fabAdd = findViewById(R.id.fabAdd);
+		fabDeleteAll = findViewById(R.id.fabDeleteAll);
 
-		// Only one click listener now, using new launcher
-		fabAdd.setOnClickListener(v -> {
-			Animation bounce = AnimationUtils.loadAnimation(this, R.anim.bounce);
-			v.startAnimation(bounce);
-			v.postDelayed(() -> {
-				Intent intent = new Intent(MainActivity.this, AddTaskActivity.class);
-				addTaskLauncher.launch(intent);
-			}, bounce.getDuration());
+		db = AppDatabase.getInstance(getApplicationContext());
+
+		recyclerView.setLayoutManager(new LinearLayoutManager(this));
+		taskAdapter = new TaskAdapter(this, new ArrayList<>(), task -> {
+			Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
+			intent.putExtra("taskId", task.getId());
+			startActivity(intent);
 		});
 
-		recyclerView = findViewById(R.id.recyclerView);
-
-		taskAdapter = new TaskAdapter(this, taskList, this);
-		recyclerView.setLayoutManager(new LinearLayoutManager(this));
 		recyclerView.setAdapter(taskAdapter);
 
-		observeTasks();
+		// Add task
+		fabAdd.setOnClickListener(view -> startActivity(new Intent(MainActivity.this, AddTaskActivity.class)));
+
+		// Delete all tasks
+		fabDeleteAll.setOnClickListener(view -> showDeleteAllConfirmation());
+
+		// Enable swipe to delete
+		setupSwipeToDelete();
+
+		loadTasks();
 	}
 
-	private void observeTasks() {
-		AppDatabase.getInstance(getApplicationContext())
-				.taskDao()
-				.getAllTasks()
-				.observe(this, new Observer<List<Task>>() {
-					@Override
-					public void onChanged(List<Task> tasks) {
-						taskList = tasks;
-						taskAdapter.updateTasks(taskList);
-					}
-				});
+	private void loadTasks() {
+		new Thread(() -> {
+			List<Task> taskList = db.taskDao().getAll();
+			if (taskList != null) {
+				Collections.sort(taskList, Comparator.comparingLong(Task::getDueDateMillis)); // Sort by due date
+			}
+			runOnUiThread(() -> taskAdapter.setTasks(taskList));
+		}).start();
+	}
+
+	private void showDeleteAllConfirmation() {
+		new AlertDialog.Builder(this)
+				.setTitle("Delete All Tasks")
+				.setMessage("Are you sure you want to delete all tasks? This action cannot be undone.")
+				.setPositiveButton("Delete", (dialog, which) -> deleteAllTasks())
+				.setNegativeButton("Cancel", null)
+				.show();
+	}
+
+	private void deleteAllTasks() {
+		new Thread(() -> {
+			db.taskDao().deleteAll();
+			runOnUiThread(() -> {
+				taskAdapter.setTasks(new ArrayList<>());
+				Toast.makeText(this, "All tasks deleted", Toast.LENGTH_SHORT).show();
+			});
+		}).start();
+	}
+
+	private void setupSwipeToDelete() {
+		ItemTouchHelper.SimpleCallback simpleCallback = new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+			@Override
+			public boolean onMove(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, RecyclerView.ViewHolder target) {
+				return false;
+			}
+
+			@Override
+			public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+				int position = viewHolder.getAdapterPosition();
+				Task task = taskAdapter.getTaskAt(position);
+				recentlyDeletedTask = task;
+
+				taskAdapter.removeTask(position);
+
+				AlarmUtils.cancelAlarm(getApplicationContext(), task.getId());
+
+				// Delete from DB
+				new Thread(() -> db.taskDao().delete(task)).start();
+
+				// Show Snackbar to undo
+				Snackbar.make(parentLayout, "Task deleted", Snackbar.LENGTH_LONG)
+						.setAction("UNDO", v -> undoDelete(task))
+						.show();
+			}
+		};
+
+		new ItemTouchHelper(simpleCallback).attachToRecyclerView(recyclerView);
+	}
+
+	private void undoDelete(Task task) {
+		new Thread(() -> {
+			db.taskDao().insert(task); // Reinsert
+			runOnUiThread(this::loadTasks);
+
+			// Restore alarm
+			AlarmUtils.setAlarm(getApplicationContext(), task.getId(), task.getTitle(), task.getDueDateMillis());
+		}).start();
 	}
 
 	@Override
-	public void onTaskClick(Task task) {
-		Intent intent = new Intent(MainActivity.this, TaskDetailActivity.class);
-		intent.putExtra("taskId", task.getId());
-		// You can convert this to use new ActivityResultLauncher as well if needed
-		startActivity(intent);
+	protected void onResume() {
+		super.onResume();
+		loadTasks();
 	}
-
-	// Remove onActivityResult, not needed with LiveData and new API
 }

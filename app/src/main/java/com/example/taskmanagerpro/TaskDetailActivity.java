@@ -3,7 +3,6 @@ package com.example.taskmanagerpro;
 import android.app.DatePickerDialog;
 import android.app.TimePickerDialog;
 import android.os.Bundle;
-import android.view.View;
 import android.widget.*;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -24,7 +23,8 @@ public class TaskDetailActivity extends AppCompatActivity {
 	private Task currentTask;
 	private final Calendar dueCalendar = Calendar.getInstance();
 
-	private final SimpleDateFormat dateTimeFormat = new SimpleDateFormat("dd MMM yyyy, hh:mm a", Locale.getDefault());
+	private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd MMM yyyy", Locale.getDefault());
+	private final SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a", Locale.getDefault());
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -43,7 +43,13 @@ public class TaskDetailActivity extends AppCompatActivity {
 
 		loadTask();
 
-		etDueDate.setOnClickListener(v -> showDateTimePicker());
+		// Disable manual input, force using pickers
+		etDueDate.setFocusable(false);
+		etReminder.setFocusable(false);
+
+		etDueDate.setOnClickListener(v -> showDatePicker());
+		etReminder.setOnClickListener(v -> showTimePicker());
+
 		btnUpdate.setOnClickListener(v -> updateTaskInDb());
 		btnDelete.setOnClickListener(v -> deleteTaskInDb());
 	}
@@ -66,9 +72,13 @@ public class TaskDetailActivity extends AppCompatActivity {
 				if (currentTask != null) {
 					etTitle.setText(currentTask.getTitle());
 					etDescription.setText(currentTask.getDescription());
+
 					dueCalendar.setTimeInMillis(currentTask.getDueTimeMillis());
-					etDueDate.setText(dateTimeFormat.format(dueCalendar.getTime()));
-					etReminder.setText(dateTimeFormat.format(dueCalendar.getTime()));  // optional
+
+					// Set separate date and time strings
+					etDueDate.setText(dateFormat.format(dueCalendar.getTime()));
+					etReminder.setText(timeFormat.format(dueCalendar.getTime()));
+
 					cbReminder.setChecked(currentTask.isReminderEnabled());
 				} else {
 					Toast.makeText(this, "Task not found", Toast.LENGTH_SHORT).show();
@@ -78,23 +88,35 @@ public class TaskDetailActivity extends AppCompatActivity {
 		}).start();
 	}
 
-	private void showDateTimePicker() {
-		new DatePickerDialog(this, (view, year, month, day) -> {
-			dueCalendar.set(Calendar.YEAR, year);
-			dueCalendar.set(Calendar.MONTH, month);
-			dueCalendar.set(Calendar.DAY_OF_MONTH, day);
+	private void showDatePicker() {
+		int year = dueCalendar.get(Calendar.YEAR);
+		int month = dueCalendar.get(Calendar.MONTH);
+		int day = dueCalendar.get(Calendar.DAY_OF_MONTH);
 
-			new TimePickerDialog(this, (view1, hour, minute) -> {
-				dueCalendar.set(Calendar.HOUR_OF_DAY, hour);
-				dueCalendar.set(Calendar.MINUTE, minute);
-				dueCalendar.set(Calendar.SECOND, 0);
+		DatePickerDialog datePickerDialog = new DatePickerDialog(this, (view, y, m, d) -> {
+			dueCalendar.set(Calendar.YEAR, y);
+			dueCalendar.set(Calendar.MONTH, m);
+			dueCalendar.set(Calendar.DAY_OF_MONTH, d);
 
-				String formatted = dateTimeFormat.format(dueCalendar.getTime());
-				etDueDate.setText(formatted);
-				etReminder.setText(formatted);
-			}, dueCalendar.get(Calendar.HOUR_OF_DAY), dueCalendar.get(Calendar.MINUTE), false).show();
+			etDueDate.setText(dateFormat.format(dueCalendar.getTime()));
+		}, year, month, day);
 
-		}, dueCalendar.get(Calendar.YEAR), dueCalendar.get(Calendar.MONTH), dueCalendar.get(Calendar.DAY_OF_MONTH)).show();
+		datePickerDialog.show();
+	}
+
+	private void showTimePicker() {
+		int hour = dueCalendar.get(Calendar.HOUR_OF_DAY);
+		int minute = dueCalendar.get(Calendar.MINUTE);
+
+		TimePickerDialog timePickerDialog = new TimePickerDialog(this, (view, h, m) -> {
+			dueCalendar.set(Calendar.HOUR_OF_DAY, h);
+			dueCalendar.set(Calendar.MINUTE, m);
+			dueCalendar.set(Calendar.SECOND, 0);
+
+			etReminder.setText(timeFormat.format(dueCalendar.getTime()));
+		}, hour, minute, false);
+
+		timePickerDialog.show();
 	}
 
 	private void updateTaskInDb() {
@@ -102,7 +124,7 @@ public class TaskDetailActivity extends AppCompatActivity {
 		String desc = etDescription.getText().toString().trim();
 		boolean isReminder = cbReminder.isChecked();
 
-		if (title.isEmpty() || etDueDate.getText().toString().isEmpty()) {
+		if (title.isEmpty() || etDueDate.getText().toString().isEmpty() || etReminder.getText().toString().isEmpty()) {
 			Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show();
 			return;
 		}

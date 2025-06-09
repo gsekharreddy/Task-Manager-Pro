@@ -68,4 +68,9 @@ public class Task {
 	public void setReminderEnabled(boolean reminderEnabled) {
 		this.reminderEnabled = reminderEnabled;
 	}
+
+	// ✅ Compatibility getter
+	public long getDueDateMillis() {
+		return dueTimeMillis;
+	}
 }

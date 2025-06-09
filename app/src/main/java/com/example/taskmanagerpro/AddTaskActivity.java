@@ -8,10 +8,9 @@ import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.DatePicker;
 import android.widget.EditText;
-import android.widget.TimePicker;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,17 +19,16 @@ import com.example.taskmanagerpro.database.AppDatabase;
 import com.example.taskmanagerpro.database.Task;
 import com.example.taskmanagerpro.utils.AlarmUtils;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
 public class AddTaskActivity extends AppCompatActivity {
 
 	private EditText etTitle, etDescription, etDueDate, etReminderTime;
+	private RadioGroup rgReminderType;
 	private Button btnSave;
-	private long dueTimeMillis = 0L;
-	private long reminderTimeMillis = 0L;
+	private long dueDateMillis = 0L;
+	private int reminderHour = -1, reminderMinute = -1;
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -42,12 +40,11 @@ public class AddTaskActivity extends AppCompatActivity {
 		etDescription = findViewById(R.id.etDescription);
 		etDueDate = findViewById(R.id.etDueDate);
 		etReminderTime = findViewById(R.id.etReminderTime);
+		rgReminderType = findViewById(R.id.rgReminderType);
 		btnSave = findViewById(R.id.btnSave);
 
-		// Due Date picker on click
 		etDueDate.setOnClickListener(v -> showDatePicker());
 
-		// Reminder Time picker on click
 		etReminderTime.setOnClickListener(v -> showTimePicker());
 
 		btnSave.setOnClickListener(v -> {
@@ -63,9 +60,13 @@ public class AddTaskActivity extends AppCompatActivity {
 		DatePickerDialog datePickerDialog = new DatePickerDialog(this,
 				(view, year, month, dayOfMonth) -> {
 					calendar.set(year, month, dayOfMonth);
-					dueTimeMillis = calendar.getTimeInMillis();
-					SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-					etDueDate.setText(sdf.format(new Date(dueTimeMillis)));
+					calendar.set(Calendar.HOUR_OF_DAY, 0);
+					calendar.set(Calendar.MINUTE, 0);
+					calendar.set(Calendar.SECOND, 0);
+					calendar.set(Calendar.MILLISECOND, 0);
+
+					dueDateMillis = calendar.getTimeInMillis();
+					etDueDate.setText(android.text.format.DateFormat.format("dd/MM/yyyy", new Date(dueDateMillis)));
 				},
 				calendar.get(Calendar.YEAR),
 				calendar.get(Calendar.MONTH),
@@ -78,14 +79,14 @@ public class AddTaskActivity extends AppCompatActivity {
 
 		TimePickerDialog timePickerDialog = new TimePickerDialog(this,
 				(view, hourOfDay, minute) -> {
+					reminderHour = hourOfDay;
+					reminderMinute = minute;
 					calendar.set(Calendar.HOUR_OF_DAY, hourOfDay);
 					calendar.set(Calendar.MINUTE, minute);
 					calendar.set(Calendar.SECOND, 0);
 					calendar.set(Calendar.MILLISECOND, 0);
-					reminderTimeMillis = calendar.getTimeInMillis();
 
-					SimpleDateFormat sdf = new SimpleDateFormat("hh:mm a");
-					etReminderTime.setText(sdf.format(new Date(reminderTimeMillis)));
+					etReminderTime.setText(android.text.format.DateFormat.format("hh:mm a", calendar));
 				},
 				calendar.get(Calendar.HOUR_OF_DAY),
 				calendar.get(Calendar.MINUTE),
@@ -102,23 +103,58 @@ public class AddTaskActivity extends AppCompatActivity {
 			return;
 		}
 
-		if (dueTimeMillis == 0L) {
+		if (dueDateMillis == 0L) {
 			Toast.makeText(this, "Please select a due date!", Toast.LENGTH_SHORT).show();
 			return;
 		}
 
-		Task newTask = new Task(title, description, dueTimeMillis, false); // Reminder flag false for now
+		long tempReminderMillis = dueDateMillis;
 
-		// Insert in DB on background thread
+		if (reminderHour >= 0 && reminderMinute >= 0) {
+			Calendar calendar = Calendar.getInstance();
+			calendar.setTimeInMillis(dueDateMillis);
+			calendar.set(Calendar.HOUR_OF_DAY, reminderHour);
+			calendar.set(Calendar.MINUTE, reminderMinute);
+			calendar.set(Calendar.SECOND, 0);
+			calendar.set(Calendar.MILLISECOND, 0);
+			tempReminderMillis = calendar.getTimeInMillis();
+		} else {
+			Calendar calendar = Calendar.getInstance();
+			calendar.setTimeInMillis(dueDateMillis);
+			calendar.set(Calendar.HOUR_OF_DAY, 9);
+			calendar.set(Calendar.MINUTE, 0);
+			calendar.set(Calendar.SECOND, 0);
+			calendar.set(Calendar.MILLISECOND, 0);
+			tempReminderMillis = calendar.getTimeInMillis();
+		}
+
+		final long reminderMillis = tempReminderMillis;
+
+		if (reminderMillis < System.currentTimeMillis()) {
+			Toast.makeText(this, "Reminder time must be in the future!", Toast.LENGTH_SHORT).show();
+			return;
+		}
+
+		Task newTask = new Task(title, description, dueDateMillis, false);
+
+		// Get selected reminder type
+		int selectedId = rgReminderType.getCheckedRadioButtonId();
+		boolean useAlarm = (selectedId == R.id.rbAlarm);
+
 		new Thread(() -> {
 			long id = AppDatabase.getInstance(getApplicationContext()).taskDao().insertAndReturnId(newTask);
 			newTask.setId((int) id);
 
-			// You can extend this part to schedule reminder alarm if you want.
-			// For now, no reminder checkbox so no alarms set.
+			// Set alarm or notification based on user choice
+			if (useAlarm) {
+				AlarmUtils.setAlarm(getApplicationContext(), newTask.getId(), newTask.getTitle(), reminderMillis);
+			} else {
+				AlarmUtils.setNotification(getApplicationContext(), newTask.getId(), newTask.getTitle(), reminderMillis);
+			}
 
 			runOnUiThread(() -> {
-				Toast.makeText(this, "Task saved!", Toast.LENGTH_SHORT).show();
+				String msg = useAlarm ? "Task saved and alarm set!" : "Task saved and notification set!";
+				Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
 				finish();
 			});
 		}).start();
