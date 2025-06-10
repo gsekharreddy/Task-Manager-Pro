@@ -1,95 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/scrollViewDetail"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:padding="16dp"
-    android:fillViewport="true"
-    android:background="@color/white">
+    android:orientation="vertical"
+    android:background="@drawable/background_gradient">
 
-    <LinearLayout
-        android:id="@+id/detailLayout"
+    <!-- Toolbar -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbarDetail"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:animation="@anim/fade_in">
+        android:background="@drawable/toolbar_gradient"
+        android:elevation="4dp"
+        android:minHeight="?attr/actionBarSize"
+        app:navigationIcon="@drawable/left1"
+        app:popupTheme="@style/ThemeOverlay.AppCompat.Light"
+        app:title="Task Detail"
+        app:titleTextColor="#FFFFFF" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Task Details"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:layout_marginBottom="16dp" />
+    <!-- Scrollable Content -->
+    <ScrollView
+        android:id="@+id/scrollViewDetail"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="16dp"
+        android:fillViewport="true">
 
-        <EditText
-            android:id="@+id/etDetailTitle"
+        <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Task Title"
-            android:inputType="text"
-            android:layout_marginBottom="12dp" />
+            android:layout_margin="4dp"
+            android:background="@android:color/transparent"
+            android:elevation="12dp"
+            app:cardBackgroundColor="#80FFFFFF"
+            app:cardCornerRadius="16dp">
 
-        <EditText
-            android:id="@+id/etDetailDescription"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Description"
-            android:inputType="textMultiLine"
-            android:minLines="3"
-            android:gravity="top"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etDetailDueDate"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Due Time (millis)"
-            android:focusable="false"
-            android:layout_marginBottom="12dp" />
-
-        <EditText
-            android:id="@+id/etDetailReminder"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Reminder Time"
-            android:focusable="false"
-            android:layout_marginBottom="16dp" />
-
-        <!-- Added Checkbox for reminder -->
-        <CheckBox
-            android:id="@+id/cbReminder"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Set Reminder"
-            android:layout_marginBottom="16dp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="end">
-
-            <Button
-                android:id="@+id/btnUpdate"
-                android:layout_width="0dp"
-                android:layout_weight="1"
+            <LinearLayout
+                android:id="@+id/detailLayout"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Update"
-                android:backgroundTint="@color/teal"
-                android:textColor="@android:color/white"
-                android:layout_marginEnd="8dp" />
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:animation="@anim/fade_in">
 
-            <Button
-                android:id="@+id/btnDelete"
-                android:layout_width="0dp"
-                android:layout_weight="1"
-                android:layout_height="wrap_content"
-                android:text="Delete"
-                android:backgroundTint="@android:color/holo_red_dark"
-                android:textColor="@android:color/white" />
-        </LinearLayout>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Task Details"
+                    android:textSize="22sp"
+                    android:textStyle="bold"
+                    android:textColor="#222222"
+                    android:layout_marginBottom="16dp" />
 
-    </LinearLayout>
-</ScrollView>
+                <EditText
+                    android:id="@+id/etDetailTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/edittext_background"
+                    android:hint="Task Title"
+                    android:inputType="text"
+                    android:padding="12dp"
+                    android:textColor="#000000" />
+
+                <EditText
+                    android:id="@+id/etDetailDescription"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/edittext_background"
+                    android:hint="Description"
+                    android:inputType="textMultiLine"
+                    android:minLines="3"
+                    android:gravity="top"
+                    android:padding="12dp"
+                    android:textColor="#000000" />
+
+                <EditText
+                    android:id="@+id/etDetailDueDate"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/edittext_background"
+                    android:hint="Due Date"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:padding="12dp"
+                    android:textColor="#000000" />
+
+                <EditText
+                    android:id="@+id/etDetailReminder"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp"
+                    android:background="@drawable/edittext_background"
+                    android:hint="Reminder Time"
+                    android:focusable="false"
+                    android:clickable="true"
+                    android:padding="12dp"
+                    android:textColor="#000000" />
+
+                <CheckBox
+                    android:id="@+id/cbReminder"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Set Reminder"
+                    android:layout_marginBottom="16dp" />
+
+                <!-- Buttons Row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="end">
+
+                    <Button
+                        android:id="@+id/btnUpdate"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp"
+                        android:background="@drawable/button_background"
+                        android:padding="12dp"
+                        android:text="Update"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold" />
+
+                    <Button
+                        android:id="@+id/btnDelete"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/button_background"
+                        android:padding="12dp"
+                        android:text="Delete"
+                        android:textColor="@android:color/white"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+    </ScrollView>
+</LinearLayout>

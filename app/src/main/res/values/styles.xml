@@ -1,2 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources></resources>
+<resources>
+<style name="GlossyEditText">
+<item name="android:layout_width">match_parent</item>
+<item name="android:layout_height">wrap_content</item>
+<item name="android:background">@drawable/glossy_card_bg</item>
+<item name="android:padding">12dp</item>
+<item name="android:textColor">#000</item>
+<item name="android:layout_marginBottom">12dp</item>
+</style>
+</resources>

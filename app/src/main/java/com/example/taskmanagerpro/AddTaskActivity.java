@@ -9,11 +9,11 @@ import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
 import com.example.taskmanagerpro.database.AppDatabase;
 import com.example.taskmanagerpro.database.Task;
@@ -36,6 +36,14 @@ public class AddTaskActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_add_task);
 		overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
 
+		Toolbar toolbar = findViewById(R.id.toolbar);
+		setSupportActionBar(toolbar);
+		if (getSupportActionBar() != null) {
+			getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+		}
+
+		toolbar.setNavigationOnClickListener(v -> onBackPressed());
+
 		etTitle = findViewById(R.id.etTitle);
 		etDescription = findViewById(R.id.etDescription);
 		etDueDate = findViewById(R.id.etDueDate);
@@ -44,7 +52,6 @@ public class AddTaskActivity extends AppCompatActivity {
 		btnSave = findViewById(R.id.btnSave);
 
 		etDueDate.setOnClickListener(v -> showDatePicker());
-
 		etReminderTime.setOnClickListener(v -> showTimePicker());
 
 		btnSave.setOnClickListener(v -> {
@@ -56,27 +63,22 @@ public class AddTaskActivity extends AppCompatActivity {
 
 	private void showDatePicker() {
 		final Calendar calendar = Calendar.getInstance();
-
 		DatePickerDialog datePickerDialog = new DatePickerDialog(this,
 				(view, year, month, dayOfMonth) -> {
-					calendar.set(year, month, dayOfMonth);
-					calendar.set(Calendar.HOUR_OF_DAY, 0);
-					calendar.set(Calendar.MINUTE, 0);
-					calendar.set(Calendar.SECOND, 0);
+					calendar.set(year, month, dayOfMonth, 0, 0, 0);
 					calendar.set(Calendar.MILLISECOND, 0);
-
 					dueDateMillis = calendar.getTimeInMillis();
 					etDueDate.setText(android.text.format.DateFormat.format("dd/MM/yyyy", new Date(dueDateMillis)));
 				},
 				calendar.get(Calendar.YEAR),
 				calendar.get(Calendar.MONTH),
-				calendar.get(Calendar.DAY_OF_MONTH));
+				calendar.get(Calendar.DAY_OF_MONTH)
+		);
 		datePickerDialog.show();
 	}
 
 	private void showTimePicker() {
 		final Calendar calendar = Calendar.getInstance();
-
 		TimePickerDialog timePickerDialog = new TimePickerDialog(this,
 				(view, hourOfDay, minute) -> {
 					reminderHour = hourOfDay;
@@ -85,12 +87,12 @@ public class AddTaskActivity extends AppCompatActivity {
 					calendar.set(Calendar.MINUTE, minute);
 					calendar.set(Calendar.SECOND, 0);
 					calendar.set(Calendar.MILLISECOND, 0);
-
 					etReminderTime.setText(android.text.format.DateFormat.format("hh:mm a", calendar));
 				},
 				calendar.get(Calendar.HOUR_OF_DAY),
 				calendar.get(Calendar.MINUTE),
-				false);
+				false
+		);
 		timePickerDialog.show();
 	}
 
@@ -108,36 +110,28 @@ public class AddTaskActivity extends AppCompatActivity {
 			return;
 		}
 
-		long tempReminderMillis = dueDateMillis;
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTimeInMillis(dueDateMillis);
 
 		if (reminderHour >= 0 && reminderMinute >= 0) {
-			Calendar calendar = Calendar.getInstance();
-			calendar.setTimeInMillis(dueDateMillis);
 			calendar.set(Calendar.HOUR_OF_DAY, reminderHour);
 			calendar.set(Calendar.MINUTE, reminderMinute);
-			calendar.set(Calendar.SECOND, 0);
-			calendar.set(Calendar.MILLISECOND, 0);
-			tempReminderMillis = calendar.getTimeInMillis();
 		} else {
-			Calendar calendar = Calendar.getInstance();
-			calendar.setTimeInMillis(dueDateMillis);
 			calendar.set(Calendar.HOUR_OF_DAY, 9);
 			calendar.set(Calendar.MINUTE, 0);
-			calendar.set(Calendar.SECOND, 0);
-			calendar.set(Calendar.MILLISECOND, 0);
-			tempReminderMillis = calendar.getTimeInMillis();
 		}
 
-		final long reminderMillis = tempReminderMillis;
+		calendar.set(Calendar.SECOND, 0);
+		calendar.set(Calendar.MILLISECOND, 0);
+
+		long reminderMillis = calendar.getTimeInMillis();
 
 		if (reminderMillis < System.currentTimeMillis()) {
 			Toast.makeText(this, "Reminder time must be in the future!", Toast.LENGTH_SHORT).show();
 			return;
 		}
 
-		Task newTask = new Task(title, description, dueDateMillis, false);
-
-		// Get selected reminder type
+		Task newTask = new Task(title, description, reminderMillis, false);
 		int selectedId = rgReminderType.getCheckedRadioButtonId();
 		boolean useAlarm = (selectedId == R.id.rbAlarm);
 
@@ -145,7 +139,6 @@ public class AddTaskActivity extends AppCompatActivity {
 			long id = AppDatabase.getInstance(getApplicationContext()).taskDao().insertAndReturnId(newTask);
 			newTask.setId((int) id);
 
-			// Set alarm or notification based on user choice
 			if (useAlarm) {
 				AlarmUtils.setAlarm(getApplicationContext(), newTask.getId(), newTask.getTitle(), reminderMillis);
 			} else {
