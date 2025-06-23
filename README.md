@@ -18,10 +18,8 @@ Data stored locally using Room (SQLite).
 
 Exposes task data through a custom ContentProvider.
 
-Suggested File Structure:
-arduino
-Copy
-Edit
+File Structure:
+
 com.example.taskmanager
 ├── MainActivity.java
 ├── AddTaskActivity.java
